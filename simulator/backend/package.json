@@ -1,0 +1,44 @@
+{
+  "name": "@simulator/backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "ts-node --esm index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "seed": "ts-node scripts/seed-db.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "latest",
+    "@auth/core": "latest",
+    "@neondatabase/serverless": "latest",
+    "@vercel/postgres": "^0.10.0",
+    "ai": "latest",
+    "bcryptjs": "latest",
+    "cors": "^2.8.5",
+    "csv-parse": "latest",
+    "date-fns": "4.1.0",
+    "dotenv": "^17.2.3",
+    "express": "^4.18.2",
+    "immer": "latest",
+    "next-auth": "latest",
+    "nodemailer": "latest",
+    "openai": "latest",
+    "use-sync-external-store": "latest",
+    "uuid": "latest",
+    "ws": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "latest",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22",
+    "@types/nodemailer": "latest",
+    "@types/uuid": "latest",
+    "@types/ws": "latest",
+    "ts-node": "latest",
+    "typescript": "^5"
+  }
+}

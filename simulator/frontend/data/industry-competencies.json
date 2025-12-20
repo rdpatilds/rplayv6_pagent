@@ -1,0 +1,82 @@
+{
+  "insurance": {
+    "life-health": {
+      "competencies": [
+        "communication",
+        "needs-assessment",
+        "objection-handling",
+        "bias-awareness",
+        "option-suggestions",
+        "time-management"
+      ],
+      "focusAreas": {
+        "life-insurance": {
+          "competencies": [],
+          "enabled": true
+        },
+        "annuities": {
+          "competencies": [],
+          "enabled": true
+        },
+        "long-term-care": {
+          "competencies": [],
+          "enabled": true
+        },
+        "medical-expense": {
+          "competencies": [],
+          "enabled": true
+        },
+        "disability-insurance": {
+          "competencies": [],
+          "enabled": true
+        }
+      }
+    },
+    "property-casualty": {
+      "competencies": [
+        "communication",
+        "needs-assessment",
+        "objection-handling",
+        "bias-awareness",
+        "option-suggestions",
+        "time-management"
+      ],
+      "focusAreas": {
+        "homeowners-insurance": {
+          "competencies": [],
+          "enabled": true
+        },
+        "automobile-insurance": {
+          "competencies": [],
+          "enabled": true
+        }
+      }
+    }
+  },
+  "wealth-management": {
+    "default": {
+      "competencies": [
+        "communication",
+        "needs-assessment",
+        "objection-handling",
+        "bias-awareness",
+        "option-suggestions",
+        "time-management"
+      ],
+      "focusAreas": {}
+    }
+  },
+  "securities": {
+    "default": {
+      "competencies": [
+        "communication",
+        "needs-assessment",
+        "objection-handling",
+        "bias-awareness",
+        "option-suggestions",
+        "time-management"
+      ],
+      "focusAreas": {}
+    }
+  }
+}

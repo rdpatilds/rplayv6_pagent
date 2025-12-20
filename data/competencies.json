@@ -1,0 +1,32 @@
+[
+  {
+    "id": "communication",
+    "name": "Communication Skills",
+    "description": "Ability to clearly articulate concepts and actively listen to clients"
+  },
+  {
+    "id": "needs-assessment",
+    "name": "Needs Assessment",
+    "description": "Ability to identify and prioritize client needs through questioning"
+  },
+  {
+    "id": "objection-handling",
+    "name": "Objection Handling",
+    "description": "Ability to address client concerns and resistance effectively"
+  },
+  {
+    "id": "bias-awareness",
+    "name": "Bias Awareness",
+    "description": "Ability to recognize and mitigate personal biases in client interactions"
+  },
+  {
+    "id": "option-suggestions",
+    "name": "Solution Recommendations",
+    "description": "Ability to suggest appropriate options based on client needs"
+  },
+  {
+    "id": "time-management",
+    "name": "Time Management",
+    "description": "Ability to efficiently use meeting time while covering necessary topics"
+  }
+]

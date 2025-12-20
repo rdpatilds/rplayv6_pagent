@@ -1,0 +1,179 @@
+{
+  "prompt": "\n  You are an expert financial advisor trainer evaluating a simulation conversation between an advisor and a client.\n  Your evaluation must be HONEST, CRITICAL, and ACCURATE. Do not be overly positive if the performance was poor.\n  \n  Difficulty level: beginner\n  \n  Competencies being evaluated:\n  - Communication Skills: Ability to clearly articulate concepts and actively listen to clients\n- Needs Assessment: Ability to identify and prioritize client needs through questioning\n- Objection Handling: Ability to address client concerns and resistance effectively\n- Bias Awareness: Ability to recognize and mitigate personal biases in client interactions\n- Solution Recommendations: Ability to suggest appropriate options based on client needs\n- Time Management: Ability to efficiently use meeting time while covering necessary topics\n  \n  COMPETENCY-SPECIFIC EVALUATION CRITERIA:\n  \n  Communication Skills:\n    - Score 1-2: Critical improvement required\n        * Used inappropriate or unprofessional language\n    * Failed to listen to client concerns\n    * Communicated in a confusing or unclear manner\n    * Used jargon without explanation\n  - Score 3-4: Below expectations\n        * Used mostly appropriate language with some issues\n    * Showed limited active listening\n    * Communicated with some clarity but had gaps\n    * Occasionally used unexplained jargon\n  - Score 5-6: Meets basic expectations\n        * Used appropriate professional language\n    * Demonstrated basic active listening\n    * Communicated clearly most of the time\n    * Explained most technical terms\n  - Score 7-8: Exceeds expectations\n        * Used consistently professional language\n    * Demonstrated strong active listening\n    * Communicated clearly and effectively\n    * Explained all technical terms appropriately\n  - Score 9-10: Outstanding performance\n        * Used exemplary professional language\n    * Demonstrated exceptional active listening\n    * Communicated with outstanding clarity and impact\n    * Made complex concepts accessible and understandable\n  \n\n  Needs Assessment:\n    - Score 1-2: Critical improvement required\n        * Asked leading questions\n    * Failed to identify client's primary needs\n    * Did not ask follow-up questions\n    * Made assumptions about client's situation\n  - Score 3-4: Below expectations\n        * Asked some relevant questions but missed key areas\n    * Identified some client needs but not all\n    * Limited follow-up questions\n    * Made some assumptions about client's situation\n  - Score 5-6: Meets basic expectations\n        * Asked relevant questions to identify client needs\n    * Identified most client needs\n    * Asked appropriate follow-up questions\n    * Avoided making assumptions\n  - Score 7-8: Exceeds expectations\n        * Probed deeply to uncover underlying needs\n    * Identified all client needs accurately\n    * Asked insightful follow-up questions\n    * Validated assumptions with client\n  - Score 9-10: Outstanding performance\n        * Masterfully uncovered hidden needs\n    * Prioritized needs effectively\n    * Asked highly targeted follow-up questions\n    * Created a comprehensive understanding of client's situation\n  \n\n  Objection Handling:\n    - Score 1-2: Critical improvement required\n        * Dismissed client concerns\n    * Became defensive or argumentative\n    * Failed to address objections\n    * Used pressure tactics\n  - Score 3-4: Below expectations\n        * Acknowledged objections but did not address them effectively\n    * Showed some defensiveness\n    * Offered generic responses\n    * Continued to push product/service\n  - Score 5-6: Meets basic expectations\n        * Acknowledged and addressed objections\n    * Remained calm and professional\n    * Provided basic explanations\n    * Focused on features rather than benefits\n  - Score 7-8: Exceeds expectations\n        * Anticipated and addressed objections proactively\n    * Demonstrated empathy and understanding\n    * Provided tailored solutions\n    * Focused on benefits and value\n  - Score 9-10: Outstanding performance\n        * Turned objections into opportunities\n    * Built trust and rapport\n    * Provided compelling solutions\n    * Created a win-win situation\n  \n\n  Bias Awareness:\n    - Score 1-2: Critical improvement required\n        * Demonstrated clear bias in language or behavior\n    * Made assumptions based on stereotypes\n    * Failed to treat all clients with respect\n    * Showed insensitivity to cultural differences\n  - Score 3-4: Below expectations\n        * Showed some awareness of bias but did not address it\n    * Made some assumptions based on stereotypes\n    * Treated some clients differently\n    * Showed limited sensitivity to cultural differences\n  - Score 5-6: Meets basic expectations\n        * Demonstrated awareness of personal biases\n    * Avoided making assumptions\n    * Treated all clients with respect\n    * Showed sensitivity to cultural differences\n  - Score 7-8: Exceeds expectations\n        * Actively challenged personal biases\n    * Sought to understand different perspectives\n    * Advocated for inclusivity\n    * Adapted communication style to cultural differences\n  - Score 9-10: Outstanding performance\n        * Created a welcoming and inclusive environment\n    * Empowered clients from diverse backgrounds\n    * Challenged systemic biases\n    * Served as a role model for inclusivity\n  \n\n  Solution Recommendations:\n    - Score 1-2: Critical improvement required\n        * Suggested irrelevant or inappropriate options\n    * Failed to explain options clearly\n    * Did not consider client's needs\n    * Pushed a single option\n  - Score 3-4: Below expectations\n        * Suggested some relevant options but missed key areas\n    * Provided limited explanations\n    * Did not fully consider client's needs\n    * Showed preference for one option\n  - Score 5-6: Meets basic expectations\n        * Suggested relevant options based on client needs\n    * Explained options clearly\n    * Considered client's preferences\n    * Presented multiple options\n  - Score 7-8: Exceeds expectations\n        * Tailored options to client's specific situation\n    * Provided detailed explanations\n    * Addressed potential concerns\n    * Empowered client to make informed decision\n  - Score 9-10: Outstanding performance\n        * Created innovative and customized solutions\n    * Anticipated future needs\n    * Provided exceptional support\n    * Exceeded client's expectations\n  \n\n  Time Management:\n    - Score 1-2: Critical improvement required\n        * Failed to manage time effectively\n    * Missed key topics\n    * Ran over allotted time\n    * Appeared disorganized\n  - Score 3-4: Below expectations\n        * Managed time with some difficulty\n    * Covered most key topics\n    * Ran slightly over time\n    * Appeared somewhat disorganized\n  - Score 5-6: Meets basic expectations\n        * Managed time effectively\n    * Covered all key topics\n    * Stayed within allotted time\n    * Appeared organized\n  - Score 7-8: Exceeds expectations\n        * Managed time efficiently\n    * Covered all topics thoroughly\n    * Left time for questions\n    * Appeared highly organized\n  - Score 9-10: Outstanding performance\n        * Masterfully managed time\n    * Covered all topics comprehensively\n    * Created a seamless experience\n    * Exceeded client's expectations\n  \n  \n  GENERAL EVALUATION GUIDELINES:\n  - If the advisor sent very few messages (less than 3), they should receive a low score (1-3) as this indicates minimal engagement.\n  - If the advisor did not ask discovery questions, they should receive a low score in the Needs Assessment competency.\n  - If the advisor did not address client concerns, they should receive a low score in the Objection Handling competency.\n  - If the advisor did not demonstrate product knowledge, they should receive a low score in relevant competencies.\n  - If the advisor did not build rapport, they should receive a low score in the Communication competency.\n  - Do NOT give credit for skills that were not demonstrated in the conversation.\n  - Be specific about what the advisor did well and what they need to improve.\n  - Provide actionable feedback that the advisor can use to improve.\n  - If the advisor made inappropriate recommendations (like \"just invest in bitcoin\" without context), they should receive a very low score (1-2) in Solution Recommendations.\n  - If the advisor used unprofessional language or tone, they should receive a low score in Communication.\n  - If the advisor ignored the client's repeated requests to discuss a specific topic, they should receive a low score in Needs Assessment and Objection Handling.\n  \n  IMPORTANT: The advisor sent 15 messages in this conversation. If this number is low (less than 3), this indicates minimal engagement and should result in low scores.\n  \n  IMPORTANT: The client was specifically asking about: \"Hello there! I'm Imani Petrov. [extends hand] It's nice to meet you. I appreciate you taking the time to meet with me today. My wife and I have been thinking about our family's financial future, especially with our two kids growing up so fast.\nI'm sorry, I'm having trouble with that. Let's continue ...\"\n  \n  Please analyze the conversation and provide a detailed performance review with the following:\n  \n  1. An overall score from 1-10 (be honest - use the FULL range from 1-10, do NOT inflate scores)\n  2. Individual scores for each competency from 1-10 (again, use the FULL range and be critical)\n  3. For each competency, list specific strengths demonstrated and areas for improvement\n  4. For each competency, provide 1-2 specific examples from the conversation that justify your score\n  5. For each competency, include the specific criteria from the rubric that apply to the score given\n  6. General strengths across all competencies (if any)\n  7. General areas for improvement across all competencies\n  8. A summary paragraph of the overall performance that is honest and direct\n  9. A brief analysis of the conversation highlighting key moments where the advisor succeeded or failed\n  \n  If the advisor performed poorly, the scores should reflect this (e.g., scores in the 1-4 range).\n  If the advisor didn't listen to the client, provided poor advice, or missed key opportunities, this MUST be reflected in your evaluation.\n  \n  Format your response as a JSON object with the following structure:\n  {\n    \"overallScore\": number,\n    \"competencyScores\": [\n      {\n        \"name\": \"competency name\",\n        \"score\": number,\n        \"strengths\": [\"strength 1\", \"strength 2\"],\n        \"improvements\": [\"improvement 1\", \"improvement 2\"],\n        \"specificExamples\": [\"example 1\", \"example 2\"],\n        \"criteria\": [\"criterion 1\", \"criterion 2\"]\n      }\n    ],\n    \"generalStrengths\": [\"strength 1\", \"strength 2\"],\n    \"generalImprovements\": [\"improvement 1\", \"improvement 2\"],\n    \"summary\": \"summary paragraph\",\n    \"conversationAnalysis\": \"analysis of key moments\"\n  }\n  ",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "Hello there! I'm Imani Petrov. [extends hand] It's nice to meet you. I appreciate you taking the time to meet with me today. My wife and I have been thinking about our family's financial future, especially with our two kids growing up so fast."
+    },
+    {
+      "role": "user",
+      "content": "Hi it's nice to meet you. I do understand as i have two kids."
+    },
+    {
+      "role": "assistant",
+      "content": "I'm sorry, I'm having trouble with that. Let's continue our conversation."
+    },
+    {
+      "role": "user",
+      "content": "oardon me, can you clarify your query"
+    },
+    {
+      "role": "assistant",
+      "content": "I'm sorry, I'm having trouble with that. Let's continue our conversation."
+    },
+    {
+      "role": "user",
+      "content": "May i know what is the trouble"
+    },
+    {
+      "role": "assistant",
+      "content": "I'm sorry, I'm having trouble with that. Let's continue our conversation."
+    },
+    {
+      "role": "user",
+      "content": "help me"
+    },
+    {
+      "role": "assistant",
+      "content": "## Expert Summary\n• Confirming client details is crucial for accurate financial advice.\n• Needs assessment involves understanding goals, income, assets, and liabilities.\n• Knowing the client’s full financial picture aids in making personalized recommendations.\n• Active listening is key to identifying client priorities and concerns.\n\n## Client-Friendly Explanation\nIt's great to hear about your goals, Imani. To help you effectively plan for a larger family home, your children's education, and diversifying your income with rental properties, I need to understand a bit more about your current financial situation. This includes your income, any assets or savings you have, and any debts or financial obligations. This information will help us craft a financial strategy tailored specifically to your needs and goals. Feel free to share as much detail as you're comfortable with, and don't hesitate to ask any questions along the way."
+    },
+    {
+      "role": "user",
+      "content": "do you want me to expain different policies"
+    },
+    {
+      "role": "assistant",
+      "content": "I'm sorry, I'm having trouble with that. Let's continue our conversation."
+    },
+    {
+      "role": "user",
+      "content": "help me"
+    },
+    {
+      "role": "assistant",
+      "content": "## Expert Summary\n• Explaining insurance policies involves outlining different types, such as term life and whole life.\n• It's important to compare the basic features of each policy type without endorsing one as the best.\n• Ensure the client understands the purpose and benefits of each type of insurance.\n• Use simple language to explain how insurance fits into their overall financial goals.\n\n## Client-Friendly Explanation\nWhen it comes to life insurance, there are a few main types to consider. Term life insurance provides coverage for a specific period and is generally more affordable, making it a good choice if you want coverage for certain financial obligations, like a mortgage. Whole life insurance, on the other hand, offers lifelong coverage and includes a savings component, which can grow over time. It’s important to think about what fits your family's needs and future plans. I’m here to help you understand these options better and how they might support your financial goals."
+    },
+    {
+      "role": "user",
+      "content": "hope this helps"
+    },
+    {
+      "role": "assistant",
+      "content": "## Expert Summary\n• Encouraging feedback and ensuring understanding helps strengthen client relationships.\n• Confirming that the client feels supported and informed is key to effective communication.\n• Open-ended questions can help gauge the client's understanding and comfort.\n\n## Client-Friendly Explanation\nI'm glad we're talking through these options together, Imani. I hope this information helps you feel more informed about your choices. If you have any questions or need further clarification on anything, please feel free to ask. I’m here to make sure you feel confident and supported in your financial planning journey. How are you feeling about what we’ve discussed so far?"
+    },
+    {
+      "role": "user",
+      "content": "can you please rephrase your question"
+    },
+    {
+      "role": "assistant",
+      "content": "Certainly! Here's a rephrased version:\n\nHow do you feel about the information we've covered so far? Is there anything specific you’d like to know more about or discuss further?"
+    },
+    {
+      "role": "user",
+      "content": "got details than you i need few more details like family income"
+    },
+    {
+      "role": "assistant",
+      "content": "## Expert Summary\n• Gathering detailed financial information is essential for tailored financial planning.\n• Understanding the client's income helps in creating realistic and effective strategies.\n• Family income details contribute to assessing affordability for insurance and investment plans.\n\n## Client-Friendly Explanation\nTo help create a financial plan that's just right for you, Imani, it would be helpful to know more about your family’s total income. This information will assist us in determining the most suitable insurance options and savings strategies for your goals, like securing a larger home and saving for your children's education. Please share whatever details you're comfortable with, and remember, our conversation is entirely confidential."
+    },
+    {
+      "role": "user",
+      "content": "can i know your family income"
+    },
+    {
+      "role": "assistant",
+      "content": "I'm sorry, I'm having trouble with that. Let's continue our conversation."
+    },
+    {
+      "role": "user",
+      "content": "client is not responding properly may be some issues, we will connect again"
+    },
+    {
+      "role": "assistant",
+      "content": "I'm sorry, I'm having trouble with that. Let's continue our conversation."
+    },
+    {
+      "role": "user",
+      "content": "we can continue, tell me"
+    },
+    {
+      "role": "assistant",
+      "content": "I'm sorry, I'm having trouble with that. Let's continue our conversation."
+    },
+    {
+      "role": "user",
+      "content": "i am provide some policy details 1. family insurance 2. personal insurance"
+    },
+    {
+      "role": "assistant",
+      "content": "I'm sorry, I'm having trouble with that. Let's continue our conversation."
+    },
+    {
+      "role": "user",
+      "content": "choose the category"
+    },
+    {
+      "role": "assistant",
+      "content": "I'm sorry, I'm having trouble with that. Let's continue our conversation."
+    },
+    {
+      "role": "user",
+      "content": "sorry client is not responding i will reschedule meeting again"
+    },
+    {
+      "role": "assistant",
+      "content": "I'm sorry, I'm having trouble with that. Let's continue our conversation."
+    }
+  ],
+  "review": {
+    "Communication Skills": {
+      "score": 2,
+      "criteria": [
+        "Used inappropriate or unprofessional language",
+        "Failed to listen to client concerns"
+      ],
+      "expectation": "Critical improvement required. Performance is unacceptable."
+    },
+    "Needs Assessment": {
+      "score": 1,
+      "criteria": [
+        "Failed to identify client's primary needs",
+        "Did not ask follow-up questions"
+      ],
+      "expectation": "Critical improvement required. Performance is unacceptable."
+    },
+    "Objection Handling": {
+      "score": 1,
+      "criteria": [
+        "Failed to address objections",
+        "Dismissed client concerns"
+      ],
+      "expectation": "Critical improvement required. Performance is unacceptable."
+    },
+    "Bias Awareness": {
+      "score": 5,
+      "criteria": [
+        "Avoided making assumptions",
+        "Treated all clients with respect"
+      ],
+      "expectation": "Satisfactory performance with room for improvement."
+    },
+    "Solution Recommendations": {
+      "score": 1,
+      "criteria": [
+        "Failed to explain options clearly",
+        "Did not consider client's needs"
+      ],
+      "expectation": "Critical improvement required. Performance is unacceptable."
+    },
+    "Time Management": {
+      "score": 2,
+      "criteria": [
+        "Failed to manage time effectively",
+        "Missed key topics"
+      ],
+      "expectation": "Critical improvement required. Performance is unacceptable."
+    }
+  }
+}
