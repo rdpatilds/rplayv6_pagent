@@ -9,5 +9,5 @@ export function randomInt(min: number, max: number): number {
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 
-
+  
 }

@@ -27,8 +27,9 @@ class ApiClient {
   constructor(baseUrl: string = "/api") {
     this.baseUrl = baseUrl;
     // Try to load session token from localStorage
+    // NOTE: Using 'auth_token' to match auth-provider.tsx
     if (typeof window !== "undefined") {
-      this.sessionToken = localStorage.getItem("session_token");
+      this.sessionToken = localStorage.getItem("auth_token");
     }
   }
 
@@ -39,9 +40,9 @@ class ApiClient {
     this.sessionToken = token;
     if (typeof window !== "undefined") {
       if (token) {
-        localStorage.setItem("session_token", token);
+        localStorage.setItem("auth_token", token);
       } else {
-        localStorage.removeItem("session_token");
+        localStorage.removeItem("auth_token");
       }
     }
   }

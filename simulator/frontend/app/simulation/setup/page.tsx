@@ -26,18 +26,60 @@ export default function SimulationPreview() {
   const subcategory = searchParams.get("subcategory") || sessionStorage.getItem("selectedSubcategory") || "life-health"
   const difficulty = searchParams.get("difficulty") || sessionStorage.getItem("selectedDifficulty") || "beginner"
 
-  // Load selected competencies from session storage
+  // Load selected competencies from session storage or API
   useEffect(() => {
-    const competenciesJson = sessionStorage.getItem("selectedCompetencies")
-    if (competenciesJson) {
+    const loadCompetencies = async () => {
+      // First try to load from session storage
+      const competenciesJson = sessionStorage.getItem("selectedCompetencies")
+      if (competenciesJson) {
+        try {
+          const competencies = JSON.parse(competenciesJson)
+          setSelectedCompetencies(competencies)
+          return
+        } catch (error) {
+          console.error("Error parsing competencies from sessionStorage:", error)
+        }
+      }
+
+      // If not in sessionStorage, fetch from API
       try {
-        const competencies = JSON.parse(competenciesJson)
-        setSelectedCompetencies(competencies)
+        const [industryResponse, competenciesResponse] = await Promise.all([
+          apiClient.get("/api/competencies/industry"),
+          apiClient.get("/api/competencies")
+        ])
+
+        const industryCompetencies = industryResponse.data.industryCompetencies || {}
+        const allCompetencies = competenciesResponse.competencies || []
+
+        // Get competency IDs for the selected industry/subcategory
+        let competencyIds: string[] = []
+        const subcategoryKey = industry !== "insurance" ? "default" : subcategory
+
+        if (industryCompetencies[industry] && industryCompetencies[industry][subcategoryKey]) {
+          const subcategoryData = industryCompetencies[industry][subcategoryKey]
+          if (Array.isArray(subcategoryData)) {
+            competencyIds = subcategoryData
+          } else if (typeof subcategoryData === 'object' && 'competencies' in subcategoryData) {
+            competencyIds = subcategoryData.competencies
+          }
+        }
+
+        // Map competency IDs to full competency objects
+        const selectedComps = competencyIds
+          .map((id) => allCompetencies.find((comp: any) => comp.id === id))
+          .filter(Boolean)
+
+        setSelectedCompetencies(selectedComps)
+
+        // Store in sessionStorage for future use
+        sessionStorage.setItem("selectedCompetencies", JSON.stringify(selectedComps))
       } catch (error) {
-        console.error("Error parsing competencies:", error)
+        console.error("Error loading competencies from API:", error)
       }
     }
-  }, [])
+
+    loadCompetencies()
+  }, [industry, subcategory])
 
   // Load client profile using the profile generator
   useEffect(() => {

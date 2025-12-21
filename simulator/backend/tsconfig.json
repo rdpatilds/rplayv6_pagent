@@ -24,7 +24,7 @@
       "@/config/*": ["./config/*"],
       "@/middleware/*": ["./middleware/*"],
       "@/shared/*": ["../../shared/*"],
-      "@/data/*": ["../../data/*"]
+      "@/data/*": ["../../shared/data/*"]
     }
   },
   "include": ["**/*.ts"],

@@ -26,9 +26,9 @@
       "@/store/*": ["./store/*"],
       "@/context/*": ["./context/*"],
       "@/shared/*": ["../../shared/*"],
-      "@/data/*": ["../../data/*"],
-      "@/app/*": ["../../app/*"],
-      "@/utils/*": ["../../utils/*"]
+      "@/data/*": ["../../shared/data/*"],
+      "@/app/*": ["./app/*"],
+      "@/utils/*": ["./utils/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

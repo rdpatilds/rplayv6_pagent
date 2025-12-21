@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { ArrowLeft, ArrowRight, Check } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { generateSimulationId } from "@/lib/simulation-utils"
+import { generateSimulationId } from "@/app/api/simulation/actions"
 import { Checkbox } from "@/components/ui/checkbox"
 import { apiClient } from "@/lib/api"
 

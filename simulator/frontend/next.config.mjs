@@ -9,6 +9,11 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Disable minification to avoid webpack error
+  swcMinify: false,
+  compiler: {
+    removeConsole: false,
+  },
   // Allow access from local network devices
   allowedDevOrigins: [
     'http://192.168.0.113:3000',

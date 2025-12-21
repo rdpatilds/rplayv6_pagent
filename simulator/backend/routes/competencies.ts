@@ -42,26 +42,16 @@ function requireAdmin(req: express.Request, res: express.Response, next: express
   next();
 }
 
-// GET /api/competencies/industry - Get industry metadata (no auth required)
+// GET /api/competencies/industry - Get industry metadata and competencies (no auth required)
 router.get('/industry', async (req: express.Request, res: express.Response) => {
   try {
-    // Return industry metadata structure
-    const industryMetadata = {
-      insurance: {
-        name: 'Insurance',
-        subcategories: ['life-health', 'property-casualty'],
-      },
-      'wealth-management': {
-        name: 'Wealth Management',
-        subcategories: ['financial-planning', 'investment-advisory'],
-      },
-      securities: {
-        name: 'Securities',
-        subcategories: ['equity', 'fixed-income'],
-      },
-    };
+    const { readJSONFile } = await import('../utils/file-storage.ts');
 
-    return res.json({ success: true, data: { industryMetadata } });
+    // Load industry competencies and metadata from shared/data
+    const industryCompetencies = readJSONFile('industry-competencies.json');
+    const industryMetadata = readJSONFile('industry-metadata.json');
+
+    return res.json({ success: true, data: { industryCompetencies, industryMetadata } });
   } catch (error) {
     console.error('Get industry metadata error:', error);
     return res.status(500).json({
@@ -71,8 +61,8 @@ router.get('/industry', async (req: express.Request, res: express.Response) => {
   }
 });
 
-// GET /api/competencies - Get all competencies or filtered
-router.get('/', requireAuth, async (req: express.Request, res: express.Response) => {
+// GET /api/competencies - Get all competencies or filtered (no auth required for basic access)
+router.get('/', async (req: express.Request, res: express.Response) => {
   try {
     const industry = req.query.industry as string;
     const category = req.query.category as string;

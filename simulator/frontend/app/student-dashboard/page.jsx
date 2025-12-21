@@ -1,5 +1,8 @@
 "use client"
 
+// Force dynamic rendering (no prerendering)
+export const dynamic = 'force-dynamic';
+
 import { useAuth } from "@/context/auth-context"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
