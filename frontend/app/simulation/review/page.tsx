@@ -236,10 +236,13 @@ export default function PerformanceReviewPage() {
             difficultyLevel: safeDifficultyLevel,
           })
 
-          setReview(response.data)
+          // Handle both response.data and response.data.data formats
+          const reviewData = response?.data?.data || response?.data
+          setReview(reviewData)
         } catch (error) {
           console.error("Error generating review:", error)
-          setError(`Failed to generate performance review: ${error.message || "Unknown error"}`)
+          console.error("Error details:", error?.response?.data || error?.message)
+          setError(`Failed to generate performance review: ${error?.response?.data?.error || error?.message || "Unknown error"}`)
 
           // Use fallback review data
           setReview({
