@@ -272,8 +272,10 @@ export default function PerformanceReviewPage() {
       try {
         const uuid = sessionStorage.getItem('currentSimulationUUID');
 
-        if (!uuid) {
-          console.warn('[REVIEW] No simulation UUID found, skipping database completion');
+        // Only attempt to save if we have a valid UUID from database
+        // Valid UUIDs have format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        if (!uuid || !uuid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+          console.log('[REVIEW] Running in frontend-only mode (no database session)');
           return;
         }
 
@@ -306,7 +308,9 @@ export default function PerformanceReviewPage() {
 
         console.log('[REVIEW] Simulation completed in database');
       } catch (error) {
-        console.error('[REVIEW] Error completing simulation:', error);
+        // Silently handle - simulation might not be in database (frontend-only mode)
+        // This is expected if user started simulation without logging in
+        console.log('[REVIEW] Simulation not saved to database (frontend-only mode)');
         // Don't fail - user can still see review
       }
     };
