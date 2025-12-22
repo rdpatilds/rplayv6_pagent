@@ -43,6 +43,10 @@ import { apiClient } from "@/lib/api"
 // Import the tooltip components at the top of the file
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
+// Import TTS components and client
+import { websocketTTS, type ConnectionState } from "@/lib/tts/websocket-tts-client"
+import { TTSControls } from "@/components/tts/tts-controls"
+
 import {
   trackSimulationLoad,
   trackSimulationExit,
@@ -195,6 +199,10 @@ export default function SimulationSessionPage() {
 
     // Add a new state variable for showing/hiding the debug panel
     const [showDebugPanel, setShowDebugPanel] = useState(false)
+
+    // TTS state
+    const [ttsEnabled, setTtsEnabled] = useState(true)
+    const [ttsConnectionState, setTtsConnectionState] = useState<ConnectionState>('disconnected')
 
     const simulationId =
       searchParams.get("simulationId") || sessionStorage.getItem("currentSimulationId") || "SIM-00000000"
@@ -1046,6 +1054,16 @@ export default function SimulationSessionPage() {
             // Record the AI response as an event
             recordEvent(`Client: ${aiResponse.substring(0, 30)}${aiResponse.length > 30 ? "..." : ""}`)
 
+            // Play TTS audio (only in client mode, not expert mode)
+            if (ttsEnabled && ttsConnectionState === 'connected') {
+              try {
+                console.log('[TTS] Speaking response...');
+                await websocketTTS.speak(aiResponse);
+              } catch (error) {
+                console.error('[TTS] Failed to speak:', error);
+              }
+            }
+
             // Process the AI response for emotional impact
             if (!expertMode && response.success) {
               console.log("Processing AI response in handleSendMessage:", aiResponse)
@@ -1253,6 +1271,41 @@ export default function SimulationSessionPage() {
       };
       fetchIndustrySettings();
     }, [industry, subcategory]);
+
+    // Initialize TTS connection
+    useEffect(() => {
+      const initTTS = async () => {
+        try {
+          console.log('[TTS] Initializing TTS connection...');
+
+          // Set up state change listener
+          websocketTTS.onStateChange((state) => {
+            console.log('[TTS] State changed:', state);
+            setTtsConnectionState(state);
+          });
+
+          // Set up error listener
+          websocketTTS.onError((error) => {
+            console.error('[TTS] Error:', error);
+          });
+
+          // Connect to TTS service
+          await websocketTTS.connect();
+          console.log('[TTS] Connected successfully');
+        } catch (error) {
+          console.error('[TTS] Failed to connect:', error);
+          setTtsConnectionState('error');
+        }
+      };
+
+      initTTS();
+
+      // Cleanup on unmount
+      return () => {
+        console.log('[TTS] Disconnecting...');
+        websocketTTS.disconnect();
+      };
+    }, []);
 
     return (
       <div className="flex h-screen bg-[rgb(239,239,239)]">
@@ -1536,6 +1589,11 @@ export default function SimulationSessionPage() {
               <div className="text-sm text-gray-500">Simulation ID: {simulationSettings.simulationId}</div>
             </div>
             <div className="flex items-center space-x-4">
+              <TTSControls
+                enabled={ttsEnabled}
+                onEnabledChange={setTtsEnabled}
+                connectionState={ttsConnectionState}
+              />
               <div className="flex items-center space-x-1">
                 <Clock className="h-4 w-4 text-gray-500" />
                 <span className="text-sm">{formatTime(elapsedTime)}</span>

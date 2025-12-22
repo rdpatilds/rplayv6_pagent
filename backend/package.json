@@ -25,6 +25,7 @@
     "next-auth": "latest",
     "nodemailer": "latest",
     "openai": "latest",
+    "socket.io": "^4.8.1",
     "use-sync-external-store": "latest",
     "uuid": "latest",
     "ws": "latest",
