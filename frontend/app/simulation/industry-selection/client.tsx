@@ -115,12 +115,14 @@ export default function IndustrySelectionClient({ initialDifficultyLevels }: Ind
       try {
         // Use server-side fetching for industry competencies
         const response = await apiClient.get("/api/competencies/industry")
-        setIndustryCompetencies(response.data.industryCompetencies || {})
-        setIndustryMetadata(response.data.industryMetadata || {})
+        setIndustryCompetencies(response?.data?.industryCompetencies || response?.industryCompetencies || {})
+        setIndustryMetadata(response?.data?.industryMetadata || response?.industryMetadata || {})
 
         // Fetch all competencies
         const compResponse = await apiClient.get("/api/competencies")
-        setAllCompetencies(compResponse.data.competencies || [])
+        // Handle both response formats: axios wrapped (.data.competencies) and direct (.competencies)
+        const competencies = compResponse?.data?.competencies || compResponse?.competencies || []
+        setAllCompetencies(competencies)
       } catch (error) {
         console.error("Error loading competencies:", error)
       }
