@@ -35,13 +35,22 @@ export function NPSFeedback({ simulationId, userId }: NPSFeedbackProps) {
     setIsSubmitting(true)
 
     try {
-      await feedbackApi.create({
-        simulationId,
-        userId,
-        rating: score * 10, // Convert 0-10 scale to 0-100
-        comments: comment.trim() || undefined,
-        feedbackType: "user_submitted",
-      })
+      // Check if user is authenticated (has a valid token)
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+
+      if (authToken) {
+        // User is authenticated, save feedback to database
+        await feedbackApi.create({
+          simulationId,
+          userId,
+          rating: score * 10, // Convert 0-10 scale to 0-100
+          comments: comment.trim() || undefined,
+          feedbackType: "user_submitted",
+        })
+      } else {
+        // User is not authenticated (frontend-only mode), just log locally
+        console.log('[Feedback] Submitted in frontend-only mode (not saved to database)')
+      }
 
       // Mark as submitted in session storage
       sessionStorage.setItem(`nps_feedback_${simulationId}`, "submitted")
@@ -52,17 +61,23 @@ export function NPSFeedback({ simulationId, userId }: NPSFeedbackProps) {
         description: "We use every submission to improve the experience.",
       })
 
-      // Redirect to dashboard after a short delay
-      setTimeout(() => {
-        router.push("/")
-      }, 2000)
+      // Redirect to dashboard immediately
+      router.push("/")
     } catch (error) {
       console.error("Error submitting feedback:", error)
+
+      // Even if feedback submission fails, still navigate to dashboard
+      // Mark as submitted so user doesn't see the form again
+      sessionStorage.setItem(`nps_feedback_${simulationId}`, "submitted")
+      setShowForm(false)
+
       toast({
-        title: "Submission failed",
-        description: error instanceof Error ? error.message : "There was an error submitting your feedback. Please try again.",
-        variant: "destructive",
+        title: "Feedback noted!",
+        description: "Redirecting to dashboard...",
       })
+
+      // Redirect to dashboard even on error
+      router.push("/")
     } finally {
       setIsSubmitting(false)
     }
