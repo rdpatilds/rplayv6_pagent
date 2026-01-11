@@ -24,6 +24,14 @@ export const config = {
     maxTokens: 500,
   },
 
+  // Azure AI Agents
+  azure: {
+    projectEndpoint: process.env.AZURE_AI_PROJECT_ENDPOINT || '',
+    modelDeploymentName: process.env.AZURE_AI_MODEL_DEPLOYMENT_NAME || 'gpt-4o',
+    agentNamePrefix: process.env.AZURE_AI_AGENT_NAME_PREFIX || 'rplay-',
+    apiKey: process.env.AZURE_AI_API_KEY || '',
+  },
+
   // Email
   email: {
     host: process.env.EMAIL_HOST || '',
@@ -68,21 +76,49 @@ export const config = {
 /**
  * Validate required environment variables
  */
-export function validateConfig(): { valid: boolean; errors: string[] } {
+export function validateConfig(): { valid: boolean; errors: string[]; warnings: string[] } {
   const errors: string[] = [];
+  const warnings: string[] = [];
 
   if (!config.database.url) {
     errors.push('DATABASE_URL is required');
   }
 
-  if (!config.openai.apiKey) {
-    errors.push('OPENAI_API_KEY is required');
+  // Check if at least one AI provider is configured
+  const hasOpenAI = !!config.openai.apiKey;
+  const hasAzure = !!config.azure.projectEndpoint;
+
+  if (!hasOpenAI && !hasAzure) {
+    errors.push('At least one AI provider is required: OPENAI_API_KEY or AZURE_AI_PROJECT_ENDPOINT');
+  }
+
+  if (hasAzure && !hasOpenAI) {
+    warnings.push('OpenAI is not configured. Fallback to OpenAI will not work if Azure agents fail.');
+  }
+
+  if (!hasAzure) {
+    warnings.push('Azure AI Agents not configured. Using OpenAI directly.');
   }
 
   return {
     valid: errors.length === 0,
     errors,
+    warnings,
   };
+}
+
+/**
+ * Check if Azure AI Agents is configured
+ */
+export function isAzureConfigured(): boolean {
+  return !!config.azure.projectEndpoint;
+}
+
+/**
+ * Check if OpenAI is configured
+ */
+export function isOpenAIConfigured(): boolean {
+  return !!config.openai.apiKey;
 }
 
 /**
@@ -143,6 +179,11 @@ export function logConfig(): void {
     openai: {
       ...config.openai,
       apiKey: config.openai.apiKey ? '***' : '',
+    },
+    azure: {
+      ...config.azure,
+      projectEndpoint: config.azure.projectEndpoint ? '***' : '',
+      apiKey: config.azure.apiKey ? '***' : '',
     },
     email: {
       ...config.email,

@@ -116,7 +116,7 @@ router.get('/:id', requireAuth, async (req: express.Request, res: express.Respon
     }
 
     // Check if user owns this simulation (unless admin)
-    if (simulation.userId !== user.id && user.role !== 'super_admin' && user.role !== 'company_admin') {
+    if (simulation.user_id !== user.id && user.role !== 'super_admin' && user.role !== 'company_admin') {
       return res.status(403).json({ success: false, error: 'Not authorized to view this simulation' });
     }
 
@@ -149,7 +149,7 @@ router.put('/:id', requireAuth, async (req: express.Request, res: express.Respon
     }
 
     // Check if user owns this simulation
-    if (simulation.userId !== user.id) {
+    if (simulation.user_id !== user.id) {
       return res.status(403).json({ success: false, error: 'Not authorized to update this simulation' });
     }
 

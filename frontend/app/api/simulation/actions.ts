@@ -26,6 +26,40 @@ import {
 import { ChatMessage, ChatMessageWithMetadata, MessageHistory } from './types';
 import { buildFusionPromptBlock } from "@/app/profile-generator/fusion-prompt-builder"
 
+// Backend API URL
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
+
+/**
+ * Try to call backend agent API first, returns null if unavailable
+ */
+async function tryBackendAgentChat(
+  endpoint: string,
+  body: any
+): Promise<{ success: boolean; message: string; objectiveProgress?: any; tier?: number; source?: string } | null> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/agents${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      // If fallback is indicated, return null to use direct OpenAI
+      if (error.fallback) {
+        console.log('[Actions] Backend agents unavailable, using direct OpenAI')
+        return null
+      }
+      throw new Error(error.message || 'Backend agent request failed')
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.warn('[Actions] Backend agent request failed:', error)
+    return null
+  }
+}
+
 // Replace the existing objectiveTrackingFunctions with this enhanced version
 const objectiveTrackingFunctions = [
   {
@@ -122,6 +156,28 @@ export async function generateClientResponse(
   apiKey?: string,
 ) {
   try {
+    // Try backend agents first
+    const agentResult = await tryBackendAgentChat('/chat/client', {
+      messages,
+      clientProfile,
+      personalitySettings,
+      simulationSettings,
+      sessionId: simulationSettings.simulationId,
+    })
+
+    if (agentResult && agentResult.success) {
+      console.log(`[Actions] Using backend agent response (source: ${agentResult.source})`)
+      return {
+        success: true,
+        message: agentResult.message,
+        objectiveProgress: agentResult.objectiveProgress,
+        source: agentResult.source,
+      }
+    }
+
+    // Fallback to direct OpenAI
+    console.log('[Actions] Using direct OpenAI for client response')
+
     // Use the provided API key, the stored key, or the environment variable
     const effectiveApiKey = apiKey || openAiApiKey || process.env.OPENAI_API_KEY
 
@@ -373,6 +429,29 @@ export async function generateExpertResponse(
   apiKey?: string,
 ) {
   try {
+    // Try backend agents first
+    const agentResult = await tryBackendAgentChat('/chat/expert', {
+      messages,
+      clientProfile,
+      personalitySettings,
+      simulationSettings,
+      objectives,
+      sessionId: simulationSettings.simulationId,
+    })
+
+    if (agentResult && agentResult.success) {
+      console.log(`[Actions] Using backend agent response for expert (source: ${agentResult.source})`)
+      return {
+        success: true,
+        message: agentResult.message,
+        tier: agentResult.tier || 3,
+        source: agentResult.source,
+      }
+    }
+
+    // Fallback to direct OpenAI
+    console.log('[Actions] Using direct OpenAI for expert response')
+
     // Use the provided API key, the stored key, or the environment variable
     const effectiveApiKey = apiKey || openAiApiKey || process.env.OPENAI_API_KEY
 

@@ -1,6 +1,13 @@
 import express from 'express';
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
+import { isAzureConfigured } from '../config/index.ts';
+import {
+  areAgentsAvailable,
+  simulationClientAgent,
+  expertGuidanceAgent,
+  type SimulationContext,
+} from '../agents/index.ts';
 
 const router = express.Router();
 
@@ -12,7 +19,55 @@ router.post('/client-response', async (req: express.Request, res: express.Respon
   try {
     const { messages, clientProfile, personalitySettings, simulationSettings, apiKey } = req.body;
 
-    // Use provided API key or stored key
+    // Try Azure agents first if available
+    if (areAgentsAvailable()) {
+      try {
+        console.log(`[CHAT] Using Azure agent for simulation ${simulationSettings.simulationId}`);
+
+        const context: SimulationContext = {
+          sessionId: simulationSettings.simulationId || `session-${Date.now()}`,
+          clientProfile,
+          personalitySettings: personalitySettings || {
+            mood: 'neutral',
+            archetype: 'Standard Client',
+            traits: { openness: 50, agreeableness: 50, conscientiousness: 50, neuroticism: 50, extraversion: 50 },
+            influence: 'balanced',
+          },
+          simulationSettings,
+        };
+
+        const result = await simulationClientAgent.generateResponse(messages, context);
+
+        if (result.success) {
+          console.log(`[CHAT] Azure agent succeeded for simulation ${simulationSettings.simulationId}`);
+
+          // If Azure agent didn't return objectiveProgress, evaluate separately
+          let objectiveProgress = result.objectiveProgress;
+          if (!objectiveProgress && messages.length > 2) {
+            try {
+              console.log('[CHAT] Evaluating objectives for Azure response...');
+              objectiveProgress = await evaluateObjectivesWithOpenAI(messages, apiKey || storedApiKey || process.env.OPENAI_API_KEY);
+            } catch (error) {
+              console.warn('[CHAT] Failed to evaluate objectives:', error);
+            }
+          }
+
+          return res.json({
+            success: true,
+            message: result.message,
+            objectiveProgress,
+            source: 'azure',
+          });
+        }
+
+        console.warn('[CHAT] Azure agent failed, falling back to OpenAI');
+      } catch (error) {
+        console.error('[CHAT] Azure agent error:', error);
+        console.warn('[CHAT] Falling back to OpenAI');
+      }
+    }
+
+    // Fallback to OpenAI
     const effectiveApiKey = apiKey || storedApiKey || process.env.OPENAI_API_KEY;
 
     if (!effectiveApiKey) {
@@ -46,87 +101,7 @@ router.post('/client-response', async (req: express.Request, res: express.Respon
     let objectiveProgress = null;
     if (messages.length > 2) {
       try {
-        const objectiveTrackingMessages = [
-          {
-            role: 'system',
-            content: `You are an objective evaluator for a financial advisor training simulation.
-Evaluate the advisor's performance based on the conversation history below.
-The advisor is the user, and the client is the assistant.
-Assess progress on these objectives:
-1. Building Rapport: Establishing a connection with the client
-2. Needs Assessment: Discovering the client's financial situation and goals
-3. Handling Objections: Addressing concerns professionally
-4. Providing Recommendations: Suggesting appropriate options based on needs
-
-IMPORTANT SCORING INSTRUCTIONS:
-- Scores generally should not decrease unless there is a significant mistake or misstep
-- If you must decrease a score, provide a specific reason in the decreaseReason object
-- Only decrease scores for serious mistakes
-
-Use the trackObjectiveProgress function to report progress percentages (0-100) on each objective.`,
-          },
-          ...messages.filter((m: any) => m.role !== 'system'),
-        ];
-
-        const objectiveResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${effectiveApiKey}`,
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o',
-            messages: objectiveTrackingMessages,
-            temperature: 0.3,
-            max_tokens: 500,
-            tools: [
-              {
-                type: 'function',
-                function: {
-                  name: 'trackObjectiveProgress',
-                  description: 'Track progress on simulation objectives based on the conversation',
-                  parameters: {
-                    type: 'object',
-                    properties: {
-                      rapport: {
-                        type: 'number',
-                        description: 'Progress percentage (0-100) on building rapport with the client',
-                      },
-                      needs: {
-                        type: 'number',
-                        description: 'Progress percentage (0-100) on needs assessment',
-                      },
-                      objections: {
-                        type: 'number',
-                        description: 'Progress percentage (0-100) on handling objections',
-                      },
-                      recommendations: {
-                        type: 'number',
-                        description: 'Progress percentage (0-100) on providing recommendations',
-                      },
-                      explanation: {
-                        type: 'string',
-                        description: 'Brief explanation of why these progress values were assigned',
-                      },
-                    },
-                    required: ['rapport', 'needs', 'objections', 'recommendations', 'explanation'],
-                  },
-                },
-              },
-            ],
-            tool_choice: { type: 'function', function: { name: 'trackObjectiveProgress' } },
-          }),
-        });
-
-        if (objectiveResponse.ok) {
-          const data = await objectiveResponse.json();
-          if (data.choices?.[0]?.message?.tool_calls?.length > 0) {
-            const toolCall = data.choices[0].message.tool_calls[0];
-            if (toolCall.function.name === 'trackObjectiveProgress') {
-              objectiveProgress = JSON.parse(toolCall.function.arguments);
-            }
-          }
-        }
+        objectiveProgress = await evaluateObjectivesWithOpenAI(messages, effectiveApiKey);
       } catch (error) {
         console.error('[CHAT] Error evaluating objectives:', error);
       }
@@ -138,6 +113,7 @@ Use the trackObjectiveProgress function to report progress percentages (0-100) o
       success: true,
       message: clientResponse,
       objectiveProgress,
+      source: 'openai',
     });
   } catch (error) {
     console.error('[CHAT] Error generating client response:', error);
@@ -154,6 +130,43 @@ router.post('/expert-response', async (req: express.Request, res: express.Respon
   try {
     const { messages, clientProfile, personalitySettings, simulationSettings, objectives, apiKey } = req.body;
 
+    // Try Azure agents first if available
+    if (areAgentsAvailable()) {
+      try {
+        console.log('[CHAT] Using Azure agent for expert guidance');
+
+        const result = await expertGuidanceAgent.generateGuidance({
+          messages,
+          clientProfile,
+          personalitySettings: personalitySettings || {
+            mood: 'neutral',
+            archetype: 'Standard Client',
+            traits: {},
+            influence: 'balanced',
+          },
+          simulationSettings,
+          objectives,
+          sessionId: simulationSettings?.simulationId || `session-${Date.now()}`,
+        });
+
+        if (result.success) {
+          console.log('[CHAT] Azure agent succeeded for expert guidance');
+          return res.json({
+            success: true,
+            message: result.message,
+            tier: result.tier,
+            source: 'azure',
+          });
+        }
+
+        console.warn('[CHAT] Azure agent failed, falling back to OpenAI');
+      } catch (error) {
+        console.error('[CHAT] Azure agent error:', error);
+        console.warn('[CHAT] Falling back to OpenAI');
+      }
+    }
+
+    // Fallback to OpenAI
     const effectiveApiKey = apiKey || storedApiKey || process.env.OPENAI_API_KEY;
 
     if (!effectiveApiKey) {
@@ -181,6 +194,7 @@ router.post('/expert-response', async (req: express.Request, res: express.Respon
       success: true,
       message: expertResponse,
       tier: 3,
+      source: 'openai',
     });
   } catch (error) {
     console.error('[CHAT] Error generating expert response:', error);
@@ -306,6 +320,105 @@ ${objectives && Array.isArray(objectives) ? objectives.map((obj) => `- ${obj.nam
 Provide clear, practical, and supportive guidance to help the advisor succeed in this simulation.
 
 Remember that you are NOT the client - you are a trainer helping the advisor.`;
+}
+
+/**
+ * Helper function to evaluate objectives using OpenAI
+ */
+async function evaluateObjectivesWithOpenAI(messages: any[], apiKey?: string): Promise<any> {
+  if (!apiKey) {
+    console.warn('[CHAT] No API key for objective evaluation');
+    return null;
+  }
+
+  const objectiveTrackingMessages = [
+    {
+      role: 'system',
+      content: `You are an objective evaluator for a financial advisor training simulation.
+Evaluate the advisor's performance based on the conversation history below.
+The advisor is the user, and the client is the assistant.
+Assess progress on these objectives:
+1. Building Rapport: Establishing a connection with the client
+2. Needs Assessment: Discovering the client's financial situation and goals
+3. Handling Objections: Addressing concerns professionally
+4. Providing Recommendations: Suggesting appropriate options based on needs
+
+IMPORTANT SCORING INSTRUCTIONS:
+- Scores generally should not decrease unless there is a significant mistake or misstep
+- If you must decrease a score, provide a specific reason in the decreaseReason object
+- Only decrease scores for serious mistakes
+- Base your evaluation on the ENTIRE conversation, not just the last message
+- Even brief exchanges that show warmth/professionalism should contribute to rapport (10-30%)
+- Any questions about client's situation should contribute to needs assessment (15-40%)
+
+Use the trackObjectiveProgress function to report progress percentages (0-100) on each objective.`,
+    },
+    ...messages.filter((m: any) => m.role !== 'system'),
+  ];
+
+  const objectiveResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: objectiveTrackingMessages,
+      temperature: 0.3,
+      max_tokens: 500,
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: 'trackObjectiveProgress',
+            description: 'Track progress on simulation objectives based on the conversation',
+            parameters: {
+              type: 'object',
+              properties: {
+                rapport: {
+                  type: 'number',
+                  description: 'Progress percentage (0-100) on building rapport with the client',
+                },
+                needs: {
+                  type: 'number',
+                  description: 'Progress percentage (0-100) on needs assessment',
+                },
+                objections: {
+                  type: 'number',
+                  description: 'Progress percentage (0-100) on handling objections',
+                },
+                recommendations: {
+                  type: 'number',
+                  description: 'Progress percentage (0-100) on providing recommendations',
+                },
+                explanation: {
+                  type: 'string',
+                  description: 'Brief explanation of why these progress values were assigned',
+                },
+              },
+              required: ['rapport', 'needs', 'objections', 'recommendations', 'explanation'],
+            },
+          },
+        },
+      ],
+      tool_choice: { type: 'function', function: { name: 'trackObjectiveProgress' } },
+    }),
+  });
+
+  if (objectiveResponse.ok) {
+    const data = await objectiveResponse.json();
+    if (data.choices?.[0]?.message?.tool_calls?.length > 0) {
+      const toolCall = data.choices[0].message.tool_calls[0];
+      if (toolCall.function.name === 'trackObjectiveProgress') {
+        const progress = JSON.parse(toolCall.function.arguments);
+        console.log('[CHAT] Objective progress evaluated:', progress);
+        return progress;
+      }
+    }
+  }
+
+  return null;
 }
 
 export default router;

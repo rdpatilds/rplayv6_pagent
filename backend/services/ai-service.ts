@@ -1,10 +1,19 @@
 /**
  * AI Service
- * Business logic for AI interactions (OpenAI API)
+ * Business logic for AI interactions
+ * Supports Azure AI Agents with OpenAI fallback
  */
 
 import OpenAI from 'openai';
 import { parameterRepository } from '../db/repositories/parameter-repository.ts';
+import { isAzureConfigured, isOpenAIConfigured } from '../config/index.ts';
+import {
+  areAgentsAvailable,
+  simulationClientAgent,
+  profileGenerationAgent,
+  evaluationAgent,
+  type SimulationContext,
+} from '../agents/index.ts';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -18,14 +27,24 @@ export interface AIResponse {
     completion: number;
     total: number;
   };
+  source?: 'azure' | 'openai';
+  objectiveProgress?: {
+    rapport: number;
+    needs: number;
+    objections: number;
+    recommendations: number;
+    explanation?: string;
+  };
 }
 
 export class AIService {
   private openai: OpenAI;
 
   constructor() {
-    if (!process.env.OPENAI_API_KEY) {
-      console.warn('OPENAI_API_KEY not set. AI features will not work.');
+    if (!isOpenAIConfigured() && !isAzureConfigured()) {
+      console.warn('Neither OPENAI_API_KEY nor AZURE_AI_PROJECT_ENDPOINT is set. AI features will not work.');
+    } else if (!isOpenAIConfigured()) {
+      console.warn('OPENAI_API_KEY not set. Fallback to OpenAI will not work.');
     }
 
     this.openai = new OpenAI({
@@ -34,13 +53,59 @@ export class AIService {
   }
 
   /**
+   * Check if Azure agents should be used
+   */
+  private shouldUseAzure(): boolean {
+    return isAzureConfigured() && areAgentsAvailable();
+  }
+
+  /**
    * Generate AI client response for simulation
+   * Uses Azure agents when available, falls back to OpenAI
    */
   async generateClientResponse(
     conversationHistory: ChatMessage[],
     clientProfile: any,
     contextParameters?: any
   ): Promise<AIResponse> {
+    // Try Azure agents first
+    if (this.shouldUseAzure()) {
+      try {
+        console.log('[AIService] Using Azure agent for client response');
+        const context: SimulationContext = {
+          sessionId: contextParameters?.sessionId || `session-${Date.now()}`,
+          clientProfile,
+          personalitySettings: contextParameters?.personalitySettings || {
+            mood: 'neutral',
+            archetype: 'Standard Client',
+            traits: { openness: 50, agreeableness: 50, conscientiousness: 50, neuroticism: 50, extraversion: 50 },
+            influence: 'balanced',
+          },
+          simulationSettings: contextParameters?.simulationSettings || {
+            industry: 'insurance',
+            difficulty: 'beginner',
+          },
+          emotionalState: contextParameters?.emotionalState,
+        };
+
+        const result = await simulationClientAgent.generateResponse(conversationHistory, context);
+
+        if (result.success) {
+          return {
+            message: result.message,
+            source: 'azure',
+            objectiveProgress: result.objectiveProgress,
+          };
+        }
+
+        console.warn('[AIService] Azure agent failed, falling back to OpenAI');
+      } catch (error) {
+        console.error('[AIService] Azure agent error:', error);
+        console.warn('[AIService] Falling back to OpenAI');
+      }
+    }
+
+    // Fallback to OpenAI
     try {
       // Get AI parameters from database
       const parameters = await this.getAIParameters();
@@ -75,6 +140,7 @@ export class AIService {
       return {
         message,
         tokenUsage,
+        source: 'openai',
       };
     } catch (error) {
       console.error('Error generating client response:', error);
@@ -84,18 +150,57 @@ export class AIService {
 
   /**
    * Generate evaluation/feedback
+   * Uses Azure agents when available, falls back to OpenAI
    */
   async generateEvaluation(
     conversationHistory: ChatMessage[],
     competencies: any[],
-    rubrics: any[]
+    rubrics: any[],
+    difficulty?: string
   ): Promise<{
     overallScore: number;
     competencyScores: Record<string, number>;
     feedback: string;
     strengths: string[];
     improvements: string[];
+    source?: 'azure' | 'openai';
   }> {
+    // Try Azure agents first
+    if (this.shouldUseAzure()) {
+      try {
+        console.log('[AIService] Using Azure agent for evaluation');
+        const result = await evaluationAgent.generateReview({
+          messages: conversationHistory,
+          competencies,
+          difficulty: difficulty || 'beginner',
+          rubrics,
+        });
+
+        if (result.success && result.review) {
+          // Transform competency scores from object to numeric values
+          const competencyScores: Record<string, number> = {};
+          for (const [name, data] of Object.entries(result.review.competencyScores)) {
+            competencyScores[name] = (data as any).score;
+          }
+
+          return {
+            overallScore: result.review.overallScore,
+            competencyScores,
+            feedback: result.review.detailedFeedback,
+            strengths: result.review.strengths,
+            improvements: result.review.areasForImprovement,
+            source: 'azure',
+          };
+        }
+
+        console.warn('[AIService] Azure agent failed, falling back to OpenAI');
+      } catch (error) {
+        console.error('[AIService] Azure agent error:', error);
+        console.warn('[AIService] Falling back to OpenAI');
+      }
+    }
+
+    // Fallback to OpenAI
     try {
       // Build evaluation prompt
       const evaluationPrompt = this.buildEvaluationPrompt(competencies, rubrics);
@@ -115,7 +220,10 @@ export class AIService {
       const evaluationText = response.choices[0]?.message?.content || '';
 
       // Parse evaluation (in production, you'd want structured output)
-      return this.parseEvaluation(evaluationText, competencies);
+      return {
+        ...this.parseEvaluation(evaluationText, competencies),
+        source: 'openai',
+      };
     } catch (error) {
       console.error('Error generating evaluation:', error);
       throw error;
@@ -124,14 +232,45 @@ export class AIService {
 
   /**
    * Generate client profile
+   * Uses Azure agents when available, falls back to OpenAI
    */
   async generateClientProfile(
     industry: string,
-    difficultyLevel: number,
+    difficultyLevel: number | string,
     parameters?: any
   ): Promise<any> {
+    const difficultyString = typeof difficultyLevel === 'number'
+      ? (difficultyLevel <= 1 ? 'beginner' : difficultyLevel <= 2 ? 'intermediate' : 'advanced')
+      : difficultyLevel;
+
+    // Try Azure agents first
+    if (this.shouldUseAzure()) {
+      try {
+        console.log('[AIService] Using Azure agent for profile generation');
+        const result = await profileGenerationAgent.generateProfile({
+          industry,
+          difficulty: difficultyString,
+          subcategory: parameters?.subcategory,
+          focusAreas: parameters?.focusAreas,
+        });
+
+        if (result.success && result.profile) {
+          return {
+            ...result.profile,
+            source: 'azure',
+          };
+        }
+
+        console.warn('[AIService] Azure agent failed, falling back to OpenAI');
+      } catch (error) {
+        console.error('[AIService] Azure agent error:', error);
+        console.warn('[AIService] Falling back to OpenAI');
+      }
+    }
+
+    // Fallback to OpenAI
     try {
-      const prompt = `Generate a realistic client profile for a ${industry} simulation at difficulty level ${difficultyLevel}. Include:
+      const prompt = `Generate a realistic client profile for a ${industry} simulation at difficulty level ${difficultyString}. Include:
 - Name
 - Age
 - Occupation
@@ -156,12 +295,16 @@ Return as JSON.`;
       const profileText = response.choices[0]?.message?.content || '{}';
 
       try {
-        return JSON.parse(profileText);
+        return {
+          ...JSON.parse(profileText),
+          source: 'openai',
+        };
       } catch {
         // If parsing fails, return structured fallback
         return {
           name: 'Generated Client',
           profile: profileText,
+          source: 'openai',
         };
       }
     } catch (error) {

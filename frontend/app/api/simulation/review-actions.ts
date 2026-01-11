@@ -7,6 +7,9 @@ import { getCompetencyCriteria } from "./rubrics"
 import { getRubrics } from "./data-store"
 import { ChatMessage, ChatMessageWithMetadata } from './types';
 
+// Backend API URL
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
+
 export type Competency = {
   id: string;
   name: string;
@@ -61,6 +64,49 @@ export async function generatePerformanceReview(
   difficultyLevel: string | null | undefined,
 ): Promise<PerformanceReview> {
   try {
+    // Try backend agents first
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/agents/evaluation/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages,
+          competencies,
+          difficulty: difficultyLevel || 'beginner',
+        }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.review) {
+          console.log('[ReviewActions] Using backend agent review')
+          // Transform backend review format to match expected format
+          const transformedScores: { [key: string]: CompetencyScore } = {}
+          for (const [name, data] of Object.entries(result.review.competencyScores || {})) {
+            const scoreData = data as any
+            transformedScores[name] = {
+              score: scoreData.score || 5,
+              feedback: scoreData.feedback || '',
+              criteria: scoreData.criteria || [],
+              expectation: scoreData.expectation,
+            }
+          }
+          return {
+            competencyScores: transformedScores,
+            overallScore: result.review.overallScore || 5,
+            strengths: result.review.strengths || [],
+            areasForImprovement: result.review.areasForImprovement || [],
+            detailedFeedback: result.review.detailedFeedback || '',
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('[ReviewActions] Backend agent failed:', error)
+    }
+
+    // Fallback to direct OpenAI
+    console.log('[ReviewActions] Using direct OpenAI for review')
+
     const apiKey = getApiKey()
     if (!apiKey) {
       console.warn("No API key found, using fallback review")

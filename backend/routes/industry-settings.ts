@@ -41,8 +41,8 @@ function requireAdmin(req: express.Request, res: express.Response, next: express
   next();
 }
 
-// GET /api/industry-settings - Get all industry settings
-router.get('/', requireAuth, requireAdmin, async (req: express.Request, res: express.Response) => {
+// GET /api/industry-settings - Get all industry settings (read access for all authenticated users)
+router.get('/', requireAuth, async (req: express.Request, res: express.Response) => {
   try {
     const industryCompetencies = await industryService.getIndustryCompetencies();
     const industryMetadata = await industryService.getIndustryMetadata();
@@ -65,8 +65,8 @@ router.get('/', requireAuth, requireAdmin, async (req: express.Request, res: exp
   }
 });
 
-// GET /api/industry-settings/competencies - Get industry competencies mappings
-router.get('/competencies', requireAuth, requireAdmin, async (req: express.Request, res: express.Response) => {
+// GET /api/industry-settings/competencies - Get industry competencies mappings (read access for all authenticated users)
+router.get('/competencies', requireAuth, async (req: express.Request, res: express.Response) => {
   try {
     const industryCompetencies = await industryService.getIndustryCompetencies();
 
@@ -83,8 +83,8 @@ router.get('/competencies', requireAuth, requireAdmin, async (req: express.Reque
   }
 });
 
-// GET /api/industry-settings/metadata - Get industry metadata
-router.get('/metadata', requireAuth, requireAdmin, async (req: express.Request, res: express.Response) => {
+// GET /api/industry-settings/metadata - Get industry metadata (read access for all authenticated users)
+router.get('/metadata', requireAuth, async (req: express.Request, res: express.Response) => {
   try {
     const industryMetadata = await industryService.getIndustryMetadata();
 
@@ -101,8 +101,8 @@ router.get('/metadata', requireAuth, requireAdmin, async (req: express.Request, 
   }
 });
 
-// GET /api/industry-settings/difficulty - Get difficulty settings
-router.get('/difficulty', requireAuth, requireAdmin, async (req: express.Request, res: express.Response) => {
+// GET /api/industry-settings/difficulty - Get difficulty settings (read access for all authenticated users)
+router.get('/difficulty', requireAuth, async (req: express.Request, res: express.Response) => {
   try {
     const difficultySettings = await industryService.getDifficultySettings();
 

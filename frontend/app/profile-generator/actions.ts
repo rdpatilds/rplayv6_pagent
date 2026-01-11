@@ -8,6 +8,9 @@ import { getDifficultySettings } from "@/app/api/simulation/data-store"
 // Add a simple in-memory cache
 const profileCache = new Map()
 
+// Backend API URL
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
+
 // Define the interface for profile generation parameters
 // These parameters come from the UI form in page.tsx
 export interface ProfileGenerationParams {
@@ -64,6 +67,59 @@ export async function generateProfile(params: ProfileGenerationParams) {
       console.log("Using cached profile")
       return profileCache.get(cacheKey)
     }
+
+    // Try backend agents first with a timeout
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
+
+      const response = await fetch(`${BACKEND_URL}/api/agents/profile/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          industry: params.industry,
+          subcategory: params.subIndustry,
+          difficulty: params.difficulty,
+          focusAreas: params.focusAreas,
+        }),
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.profile) {
+          console.log('[ProfileGenerator] Using backend agent profile')
+          // Transform backend profile to match expected format
+          const profile = {
+            ...result.profile,
+            source: 'azure',
+          }
+          // Cache the result
+          profileCache.set(cacheKey, profile)
+          return profile
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.warn('[ProfileGenerator] Backend agent timed out after 15s, using fallback')
+      } else {
+        console.warn('[ProfileGenerator] Backend agent failed:', error)
+      }
+    }
+
+    // Check if OpenAI API key is available before attempting fallback
+    const hasOpenAIKey = !!process.env.OPENAI_API_KEY
+    if (!hasOpenAIKey) {
+      console.log('[ProfileGenerator] No OpenAI API key, using fallback profile')
+      const fallbackProfile = getFallbackProfile(params.difficulty || "beginner")
+      profileCache.set(cacheKey, fallbackProfile)
+      return fallbackProfile
+    }
+
+    // Fallback to direct OpenAI
+    console.log('[ProfileGenerator] Using direct OpenAI for profile generation')
 
     // Fetch industry-specific traits if not provided
     let industryTraits = params.industryTraits

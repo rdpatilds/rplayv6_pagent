@@ -12,6 +12,8 @@
   "dependencies": {
     "@ai-sdk/openai": "latest",
     "@auth/core": "latest",
+    "@azure/ai-projects": "^1.0.0-beta.6",
+    "@azure/identity": "^4.0.0",
     "@neondatabase/serverless": "latest",
     "@vercel/postgres": "^0.10.0",
     "ai": "latest",

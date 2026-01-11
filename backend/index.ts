@@ -7,7 +7,7 @@ import 'dotenv/config';
 import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
-import { config } from './config/index.ts';
+import { config, isAzureConfigured } from './config/index.ts';
 import authRouter from './routes/auth.ts';
 import usersRouter from './routes/users.ts';
 import simulationRouter from './routes/simulation.ts';
@@ -18,7 +18,9 @@ import engagementRouter from './routes/engagement.ts';
 import difficultyRouter from './routes/difficulty.ts';
 import chatRouter from './routes/chat.ts';
 import industrySettingsRouter from './routes/industry-settings.ts';
-import { WebSocketTTSService } from './services/websocket-tts-service.ts';
+import agentsRouter from './routes/agents.js';
+import { WebSocketTTSService } from './services/websocket-tts-service.js';
+import { initializeAgents, getAgentStatus } from './agents/index.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -61,6 +63,7 @@ const ttsService = new WebSocketTTSService(
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+  const agentStatus = getAgentStatus();
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -68,6 +71,11 @@ app.get('/health', (req, res) => {
     tts: {
       enabled: !!process.env.OPENAI_API_KEY,
       activeConnections: ttsService.getStats().activeConnections,
+    },
+    agents: {
+      configured: agentStatus.azureConfigured,
+      initialized: agentStatus.azureClient.initialized,
+      count: agentStatus.agents.filter(a => a.initialized).length,
     },
   });
 });
@@ -103,6 +111,7 @@ app.use('/api/engagement', engagementRouter);
 app.use('/api/difficulty', difficultyRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api/industry-settings', industrySettingsRouter);
+app.use('/api/agents', agentsRouter);
 
 // TTS stats endpoint
 app.get('/api/tts/stats', (req, res) => {
@@ -127,6 +136,7 @@ app.get('/api', (req, res) => {
       difficulty: '/api/difficulty/*',
       chat: '/api/chat/*',
       industrySettings: '/api/industry-settings/*',
+      agents: '/api/agents/*',
       tts: '/api/tts/stats',
     }
   });
@@ -157,6 +167,7 @@ httpServer.listen(PORT, () => {
   console.log(`✓ Environment: ${config.app.environment}`);
   console.log(`✓ Health check: http://localhost:${PORT}/health`);
   console.log(`✓ DB Health: http://localhost:${PORT}/api/health/db`);
+  console.log(`✓ Agents Health: http://localhost:${PORT}/api/agents/health`);
   console.log(`✓ TTS Stats: http://localhost:${PORT}/api/tts/stats`);
   console.log(`✓ WebSocket TTS: Enabled`);
   console.log('='.repeat(50));
@@ -166,6 +177,25 @@ httpServer.listen(PORT, () => {
     .then(({ sql }) => sql`SELECT 1 as test`)
     .then(() => console.log('✓ Database connected'))
     .catch((err) => console.error('✗ Database connection failed:', err.message));
+
+  // Initialize Azure AI Agents on startup (non-blocking)
+  if (isAzureConfigured()) {
+    console.log('⏳ Initializing Azure AI Agents...');
+    initializeAgents()
+      .then((result) => {
+        if (result.success) {
+          console.log(`✓ Azure AI Agents initialized (${result.agents.filter(a => a.initialized).length}/${result.agents.length} agents)`);
+        } else {
+          console.warn('⚠ Some Azure AI Agents failed to initialize');
+          result.agents.filter(a => !a.initialized).forEach(a => {
+            console.warn(`  - ${a.name}: ${a.error}`);
+          });
+        }
+      })
+      .catch((err) => console.error('✗ Azure AI Agents initialization failed:', err.message));
+  } else {
+    console.log('ℹ Azure AI Agents not configured (using OpenAI fallback)');
+  }
 });
 
 export default app;
