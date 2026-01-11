@@ -29,6 +29,8 @@ from app.routers import (
     industry_settings_router,
     difficulty_router,
 )
+from app.routers.agents import router as agents_router
+from app.agents.agent_manager import agent_manager
 
 # Configure logging
 logging.basicConfig(
@@ -69,6 +71,32 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Database connection failed: {e}")
 
+    # Initialize Azure AI Agents
+    try:
+        logger.info("=" * 50)
+        logger.info("AI Backend Configuration:")
+        logger.info(f"  Azure AI configured: {agent_manager.is_azure_configured}")
+        logger.info(f"  OpenAI fallback available: {bool(settings.openai_api_key)}")
+
+        if agent_manager.is_azure_configured:
+            logger.info("Initializing Azure AI Agents...")
+            results = await agent_manager.initialize_all()
+            initialized = sum(1 for v in results.values() if v)
+
+            if initialized > 0:
+                logger.info(f"✓ Azure AI Agents: {initialized}/{len(results)} agents initialized")
+                logger.info("✓ AI Backend: Azure AI Agents (primary)")
+            else:
+                logger.warning("✗ Azure AI Agents initialization failed")
+                logger.info("✓ AI Backend: OpenAI (fallback)")
+        else:
+            logger.info("Azure AI Agents not configured")
+            logger.info("✓ AI Backend: OpenAI (fallback)")
+        logger.info("=" * 50)
+    except Exception as e:
+        logger.error(f"Azure AI Agents initialization failed: {e}")
+        logger.info("✓ AI Backend: OpenAI (fallback due to error)")
+
     logger.info("WebSocket TTS service initialized")
     logger.info("=" * 50)
 
@@ -77,6 +105,14 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down...")
     await DatabasePool.close()
+
+    # Cleanup Azure AI Agents
+    try:
+        await agent_manager.cleanup_all()
+        logger.info("Azure AI Agents cleaned up")
+    except Exception as e:
+        logger.error(f"Azure AI Agents cleanup error: {e}")
+
     tts_service = get_tts_service()
     if tts_service:
         await tts_service.shutdown()
@@ -197,6 +233,7 @@ fastapi_app.include_router(feedback_router, prefix="/api")
 fastapi_app.include_router(engagement_router, prefix="/api")
 fastapi_app.include_router(industry_settings_router, prefix="/api")
 fastapi_app.include_router(difficulty_router, prefix="/api")
+fastapi_app.include_router(agents_router, prefix="/api")
 
 
 # 404 handler

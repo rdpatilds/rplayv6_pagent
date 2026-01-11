@@ -1,7 +1,7 @@
 """
 AI Service
 Business logic for AI interactions
-Supports OpenAI with Azure Agents fallback support
+Supports Azure AI Agents with OpenAI fallback
 """
 
 import json
@@ -14,12 +14,13 @@ from openai import AsyncOpenAI
 from app.config import get_settings, is_openai_configured, is_azure_configured
 from app.repositories.parameter_repository import parameter_repository
 from app.models.chat import ChatMessage, AIResponse, ObjectiveProgress
+from app.agents.agent_manager import agent_manager
 
 logger = logging.getLogger(__name__)
 
 
 class AIService:
-    """Service for AI interactions."""
+    """Service for AI interactions with Azure Agents and OpenAI fallback."""
 
     def __init__(self):
         settings = get_settings()
@@ -34,9 +35,7 @@ class AIService:
 
     def _should_use_azure(self) -> bool:
         """Check if Azure agents should be used."""
-        # For now, always use OpenAI
-        # Azure agent support would require additional implementation
-        return False
+        return agent_manager.is_azure_available
 
     async def generate_client_response(
         self,
@@ -46,16 +45,54 @@ class AIService:
     ) -> AIResponse:
         """
         Generate AI client response for simulation.
-        Uses OpenAI with Azure agents fallback support.
+        Uses Azure agents with OpenAI fallback.
         """
-        try:
-            # Get AI parameters from database
-            parameters = await self._get_ai_parameters()
+        # Try Azure agent first
+        if self._should_use_azure():
+            try:
+                agent = agent_manager.get_simulation_client_agent()
+                if agent and agent.is_initialized:
+                    # Convert messages to dict format
+                    messages = []
+                    for msg in conversation_history:
+                        if isinstance(msg, ChatMessage):
+                            messages.append({"role": msg.role, "content": msg.content})
+                        else:
+                            messages.append(msg)
 
-            # Build system prompt with client profile
+                    result = await agent.generate_response(
+                        messages=messages,
+                        client_profile=client_profile,
+                        personality_settings=context_parameters.get("personality_settings") if context_parameters else None,
+                        simulation_settings=context_parameters.get("simulation_settings") if context_parameters else None,
+                    )
+
+                    return AIResponse(
+                        message=result.get("message", ""),
+                        token_usage=None,
+                        source="azure-agent",
+                    )
+            except Exception as e:
+                logger.warning(f"Azure agent failed, falling back to OpenAI: {e}")
+
+        # Fallback to OpenAI
+        return await self._generate_client_response_openai(
+            conversation_history,
+            client_profile,
+            context_parameters,
+        )
+
+    async def _generate_client_response_openai(
+        self,
+        conversation_history: list[ChatMessage | dict[str, Any]],
+        client_profile: dict[str, Any],
+        context_parameters: dict[str, Any] | None = None,
+    ) -> AIResponse:
+        """Generate client response using OpenAI."""
+        try:
+            parameters = await self._get_ai_parameters()
             system_prompt = self._build_system_prompt(client_profile, parameters)
 
-            # Prepare messages
             messages = [{"role": "system", "content": system_prompt}]
             for msg in conversation_history:
                 if isinstance(msg, ChatMessage):
@@ -63,7 +100,6 @@ class AIService:
                 else:
                     messages.append(msg)
 
-            # Call OpenAI API
             if not self.openai:
                 raise ValueError("OpenAI client not configured")
 
@@ -104,9 +140,46 @@ class AIService:
     ) -> dict[str, Any]:
         """
         Generate evaluation/feedback.
+        Uses Azure agents with OpenAI fallback.
         """
+        # Try Azure agent first
+        if self._should_use_azure():
+            try:
+                agent = agent_manager.get_evaluation_agent()
+                if agent and agent.is_initialized:
+                    messages = []
+                    for msg in conversation_history:
+                        if isinstance(msg, ChatMessage):
+                            messages.append({"role": msg.role, "content": msg.content})
+                        else:
+                            messages.append(msg)
+
+                    result = await agent.generate_review(
+                        messages=messages,
+                        competencies=competencies,
+                        difficulty=difficulty,
+                    )
+                    return result
+            except Exception as e:
+                logger.warning(f"Azure agent failed, falling back to OpenAI: {e}")
+
+        # Fallback to OpenAI
+        return await self._generate_evaluation_openai(
+            conversation_history,
+            competencies,
+            rubrics,
+            difficulty,
+        )
+
+    async def _generate_evaluation_openai(
+        self,
+        conversation_history: list[ChatMessage | dict[str, Any]],
+        competencies: list[dict[str, Any]],
+        rubrics: list[dict[str, Any]],
+        difficulty: str | None = None,
+    ) -> dict[str, Any]:
+        """Generate evaluation using OpenAI."""
         try:
-            # Build evaluation prompt
             evaluation_prompt = self._build_evaluation_prompt(competencies, rubrics)
 
             messages = [
@@ -126,7 +199,6 @@ class AIService:
 
             evaluation_text = response.choices[0].message.content or ""
 
-            # Parse evaluation
             return {
                 **self._parse_evaluation(evaluation_text, competencies),
                 "source": "openai",
@@ -141,13 +213,40 @@ class AIService:
         difficulty_level: int | str,
         parameters: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Generate client profile."""
-        try:
-            difficulty_string = (
-                difficulty_level if isinstance(difficulty_level, str)
-                else ("beginner" if difficulty_level <= 1 else "intermediate" if difficulty_level <= 2 else "advanced")
-            )
+        """
+        Generate client profile.
+        Uses Azure agents with OpenAI fallback.
+        """
+        difficulty_string = (
+            difficulty_level if isinstance(difficulty_level, str)
+            else ("beginner" if difficulty_level <= 1 else "intermediate" if difficulty_level <= 2 else "advanced")
+        )
 
+        # Try Azure agent first
+        if self._should_use_azure():
+            try:
+                agent = agent_manager.get_profile_generation_agent()
+                if agent and agent.is_initialized:
+                    result = await agent.generate_profile(
+                        industry=industry,
+                        difficulty=difficulty_string,
+                        parameters=parameters,
+                    )
+                    return result
+            except Exception as e:
+                logger.warning(f"Azure agent failed, falling back to OpenAI: {e}")
+
+        # Fallback to OpenAI
+        return await self._generate_client_profile_openai(industry, difficulty_string, parameters)
+
+    async def _generate_client_profile_openai(
+        self,
+        industry: str,
+        difficulty_string: str,
+        parameters: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Generate client profile using OpenAI."""
+        try:
             prompt = f"""Generate a realistic client profile for a {industry} simulation at difficulty level {difficulty_string}. Include:
 - Name
 - Age
@@ -191,7 +290,25 @@ Return as JSON."""
             raise
 
     async def generate_conversation_starter(self, client_profile: dict[str, Any]) -> str:
-        """Generate conversation starter."""
+        """
+        Generate conversation starter.
+        Uses Azure agents with OpenAI fallback.
+        """
+        # Try Azure agent first
+        if self._should_use_azure():
+            try:
+                agent = agent_manager.get_profile_generation_agent()
+                if agent and agent.is_initialized:
+                    result = await agent.generate_conversation_starter(client_profile)
+                    return result
+            except Exception as e:
+                logger.warning(f"Azure agent failed, falling back to OpenAI: {e}")
+
+        # Fallback to OpenAI
+        return await self._generate_conversation_starter_openai(client_profile)
+
+    async def _generate_conversation_starter_openai(self, client_profile: dict[str, Any]) -> str:
+        """Generate conversation starter using OpenAI."""
         try:
             prompt = f"""Given this client profile, generate a realistic opening message from the client starting the conversation with their financial advisor:
 
@@ -246,7 +363,36 @@ The message should be natural and reflect the client's personality and concerns.
         messages: list[dict[str, Any]],
         api_key: str | None = None,
     ) -> ObjectiveProgress | None:
-        """Evaluate objective progress using function calling."""
+        """
+        Evaluate objective progress.
+        Uses Azure agents with OpenAI fallback.
+        """
+        # Try Azure agent first
+        if self._should_use_azure():
+            try:
+                agent = agent_manager.get_evaluation_agent()
+                if agent and agent.is_initialized:
+                    result = await agent.evaluate_objectives(messages)
+                    if result:
+                        return ObjectiveProgress(
+                            rapport=result.get("rapport", 0),
+                            needs=result.get("needs", 0),
+                            objections=result.get("objections", 0),
+                            recommendations=result.get("recommendations", 0),
+                            explanation=result.get("explanation", ""),
+                        )
+            except Exception as e:
+                logger.warning(f"Azure agent failed, falling back to OpenAI: {e}")
+
+        # Fallback to OpenAI
+        return await self._evaluate_objectives_openai(messages, api_key)
+
+    async def _evaluate_objectives_openai(
+        self,
+        messages: list[dict[str, Any]],
+        api_key: str | None = None,
+    ) -> ObjectiveProgress | None:
+        """Evaluate objectives using OpenAI function calling."""
         try:
             effective_api_key = api_key or self.settings.openai_api_key
             if not effective_api_key:
@@ -397,7 +543,6 @@ Return as structured text."""
         competencies: list[dict[str, Any]],
     ) -> dict[str, Any]:
         """Parse evaluation response."""
-        # In production, you'd want more robust parsing or structured output
         competency_scores = {c.get("name", ""): 75 for c in competencies}
 
         return {
@@ -413,7 +558,6 @@ Return as structured text."""
         try:
             params = await parameter_repository.find_by_type("structured")
 
-            # Convert parameter list to object
             param_obj = {}
             for p in params:
                 try:
@@ -427,7 +571,6 @@ Return as structured text."""
             return param_obj
         except Exception as e:
             logger.error(f"Error getting AI parameters: {e}")
-            # Return defaults
             return {
                 "model": "gpt-4",
                 "temperature": 0.7,

@@ -1,6 +1,6 @@
 """
 Simulation Router
-Simulation management endpoints
+Simulation management endpoints with Azure AI Agents support
 """
 
 import json
@@ -16,6 +16,7 @@ from app.repositories.simulation_repository import simulation_repository
 from app.middleware.auth import get_current_user, require_ownership_or_admin
 from app.models.user import UserData
 from app.utils.validation import validate_uuid
+from app.agents.agent_manager import agent_manager
 
 logger = logging.getLogger(__name__)
 
@@ -256,6 +257,30 @@ async def generate_review(
             )
 
         settings = get_settings()
+
+        # Try Azure agent first
+        if agent_manager.is_azure_available:
+            try:
+                agent = agent_manager.get_evaluation_agent()
+                if agent and agent.is_initialized:
+                    result = await agent.generate_review(
+                        messages=messages,
+                        competencies=competencies,
+                        difficulty=difficulty_level,
+                    )
+
+                    # Ensure required fields
+                    result.setdefault("competencyScores", [])
+                    result.setdefault("generalStrengths", [])
+                    result.setdefault("generalImprovements", [])
+                    result.setdefault("overallScore", 5)
+                    result.setdefault("summary", "")
+
+                    return {"success": True, "data": result}
+            except Exception as e:
+                logger.warning(f"[SIMULATION] Azure agent failed, falling back to OpenAI: {e}")
+
+        # Fallback to OpenAI
         api_key = settings.openai_api_key
         if not api_key:
             raise HTTPException(
@@ -356,6 +381,7 @@ IMPORTANT: Respond with ONLY the raw JSON object. Do NOT wrap it in markdown cod
                 review_data.setdefault("generalImprovements", [])
                 review_data.setdefault("overallScore", 5)
                 review_data.setdefault("summary", "")
+                review_data["source"] = "openai"
 
                 return {"success": True, "data": review_data}
             except json.JSONDecodeError:

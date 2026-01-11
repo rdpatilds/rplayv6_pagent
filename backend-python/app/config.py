@@ -35,9 +35,10 @@ class Settings(BaseSettings):
     openai_max_tokens: int = Field(default=500, description="Max tokens for completion")
 
     # Azure AI Agents
+    
     azure_ai_project_endpoint: str = Field(default="", description="Azure AI Project endpoint")
     azure_ai_model_deployment_name: str = Field(default="gpt-4o", description="Azure model deployment name")
-    azure_ai_agent_name_prefix: str = Field(default="rplay-", description="Agent name prefix")
+    azure_ai_agent_name_prefix: str = Field(default="rplaypyth-", description="Agent name prefix")
     azure_ai_api_key: str = Field(default="", description="Azure AI API key (not currently supported)")
 
     # Azure Service Principal (optional)

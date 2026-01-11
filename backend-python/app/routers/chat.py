@@ -1,6 +1,6 @@
 """
 Chat Router
-AI chat endpoints
+AI chat endpoints with Azure AI Agents support
 """
 
 import json
@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException, status, Body
 
 from app.config import get_settings
 from app.services.ai_service import ai_service
+from app.agents.agent_manager import agent_manager
 from app.models.chat import ChatMessage
 
 logger = logging.getLogger(__name__)
@@ -113,12 +114,6 @@ async def client_response(
         settings = get_settings()
         effective_api_key = api_key or stored_api_key or settings.openai_api_key
 
-        if not effective_api_key:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="OpenAI API key is missing. Please configure it in the API Settings page.",
-            )
-
         # Default personality settings
         personality = personality_settings or {
             "mood": "neutral",
@@ -126,6 +121,49 @@ async def client_response(
             "traits": {"openness": 50, "agreeableness": 50, "conscientiousness": 50, "neuroticism": 50, "extraversion": 50},
             "influence": "balanced",
         }
+
+        logger.info(f"[CHAT] Generating client response for simulation {simulation_settings.get('simulationId')}")
+
+        # Try Azure agent first
+        if agent_manager.is_azure_available:
+            try:
+                agent = agent_manager.get_simulation_client_agent()
+                if agent and agent.is_initialized:
+                    result = await agent.generate_response(
+                        messages=messages,
+                        client_profile=client_profile,
+                        personality_settings=personality,
+                        simulation_settings=simulation_settings,
+                        session_id=simulation_settings.get("simulationId"),
+                    )
+
+                    # Evaluate objectives if we have enough messages
+                    objective_progress = None
+                    if len(messages) > 2:
+                        try:
+                            objective_progress = await ai_service.evaluate_objectives(messages, effective_api_key)
+                            if objective_progress:
+                                objective_progress = objective_progress.model_dump()
+                        except Exception as e:
+                            logger.error(f"[CHAT] Error evaluating objectives: {e}")
+
+                    logger.info(f"[CHAT] Successfully generated Azure agent response for simulation {simulation_settings.get('simulationId')}")
+
+                    return {
+                        "success": True,
+                        "message": result.get("message", ""),
+                        "objectiveProgress": objective_progress,
+                        "source": "azure-agent",
+                    }
+            except Exception as e:
+                logger.warning(f"[CHAT] Azure agent failed, falling back to OpenAI: {e}")
+
+        # Fallback to OpenAI
+        if not effective_api_key:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OpenAI API key is missing. Please configure it in the API Settings page.",
+            )
 
         # Build system prompt
         system_prompt = build_system_prompt(client_profile, personality, simulation_settings)
@@ -135,8 +173,6 @@ async def client_response(
             {"role": "system", "content": system_prompt},
             *[m for m in messages if m.get("role") != "system"],
         ]
-
-        logger.info(f"[CHAT] Generating client response for simulation {simulation_settings.get('simulationId')}")
 
         # Generate response using OpenAI
         async with httpx.AsyncClient() as client:
@@ -209,12 +245,6 @@ async def expert_response(
         settings = get_settings()
         effective_api_key = api_key or stored_api_key or settings.openai_api_key
 
-        if not effective_api_key:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="OpenAI API key is missing. Please configure it in the API Settings page.",
-            )
-
         # Default personality settings
         personality = personality_settings or {
             "mood": "neutral",
@@ -222,6 +252,35 @@ async def expert_response(
             "traits": {},
             "influence": "balanced",
         }
+
+        # Try Azure agent first
+        if agent_manager.is_azure_available:
+            try:
+                agent = agent_manager.get_expert_guidance_agent()
+                if agent and agent.is_initialized:
+                    result = await agent.generate_guidance(
+                        messages=messages,
+                        client_profile=client_profile,
+                        simulation_settings=simulation_settings,
+                        objectives=objectives,
+                        session_id=simulation_settings.get("simulationId"),
+                    )
+
+                    return {
+                        "success": True,
+                        "message": result.get("message", ""),
+                        "tier": result.get("tier", 3),
+                        "source": "azure-agent",
+                    }
+            except Exception as e:
+                logger.warning(f"[CHAT] Azure agent failed, falling back to OpenAI: {e}")
+
+        # Fallback to OpenAI
+        if not effective_api_key:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OpenAI API key is missing. Please configure it in the API Settings page.",
+            )
 
         # Build expert prompt
         expert_prompt = build_expert_prompt(client_profile, personality, simulation_settings, objectives)
